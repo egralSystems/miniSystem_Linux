@@ -1,0 +1,3 @@
+[submodule "miniSystem"]
+	path = miniSystem
+	url = git@github.com:egralSystems/miniSystem.git
