@@ -5,14 +5,14 @@
 #include <stream.hpp>
 #include <fs.hpp>
 
-class ConsoleIf : public StreamIf<std::string>
+class LinuxConsole : public StreamIf<std::string>
 {
 public:
     bool readable = false;
     bool writable = true;
 
-    ConsoleIf() {}
-    ~ConsoleIf() {}
+    LinuxConsole() {}
+    ~LinuxConsole() {}
 
     void write(const std::string &src)
     {
@@ -24,14 +24,14 @@ public:
     }
 };
 
-class FSIf : public FileIf
+class LinuxFileIf : public FileIf
 {
 private:
     FILE *file;
 
 public:
-    FSIf(){};
-    ~FSIf(){};
+    LinuxFileIf(){};
+    ~LinuxFileIf(){};
 
     void open(std::string path, std::string accessType)
     {
@@ -78,9 +78,31 @@ public:
     }
 };
 
+class LinuxFS : public FSIf
+{
+public:
+    FileIf *open(std::string path, std::string options)
+    {
+        LinuxFileIf *file = new LinuxFileIf;
+        file->open(path, options);
+
+        return (FileIf *)file;
+    }
+};
+
 int main()
 {
-    MiniSystem<ConsoleIf, FSIf> ms = MiniSystem<ConsoleIf, FSIf>();
+    auto fileDef = "foreign class File {\nconstruct open(path, options) {}\nforeign close()\nforeign read(count)\n}";
 
-    printf("Result: %d.\n", ms.eval("System.print(\"Hello world!\")"));
+    IO *io = new IO;
+
+    io->registerIf(new LinuxConsole);
+    io->registerIf(new LinuxFS);
+
+    MiniSystem ms(io);
+
+    printf("Result: %d.\n", ms.eval(fileDef));
+    printf("Result: %d.\n", ms.eval("var file = File.open(\"../LICENSE\", \"r\")"));
+    printf("Result: %d.\n", ms.eval("System.print(file.read(11))"));
+    printf("Result: %d.\n", ms.eval("file.close()"));
 }
