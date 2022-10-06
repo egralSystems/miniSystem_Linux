@@ -1,7 +1,8 @@
 #include <stdio.h>
+#include <string>
+
 #include <miniSystem.hpp>
 #include <stream.hpp>
-#include <string>
 
 class ConsoleIf : public StreamIf<std::string>
 {
@@ -24,7 +25,7 @@ public:
 
 int main()
 {
-    MiniSystem ms(new ConsoleIf());
+    MiniSystem ms(new ConsoleIf);
 
     printf("Result: %d.\n", ms.eval("System.print(\"Hello world!\")"));
 }
