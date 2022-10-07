@@ -117,13 +117,15 @@ public:
     }
     WrenLoadModuleResult loadModule(WrenVM *vm)
     {
-        WrenLoadModuleResult result;
+        WrenLoadModuleResult res;
+        res.onComplete = nullptr;
+        res.userData = wrenGetUserData(vm);
 
-        result.source = "foreign class Greeter {\n"
-                        "   foreign static greet(who)\n"
-                        "}";
+        res.source = "foreign class Greeter {\n"
+                     "   foreign static greet(who)\n"
+                     "}";
 
-        return result;
+        return res;
     }
 
     static void greet(WrenVM *vm)
@@ -139,10 +141,14 @@ int main()
     mman->registerIf(new LinuxConsole);
     mman->registerIf(new LinuxFS);
 
+    mman->addModule("Test", new Module(new Greeter));
+
     MiniSystem ms(mman);
 
-    printf("Result: %d.\n", ms.eval("import \"FS\""));
+    printf("Result: %d.\n", ms.eval("import \"FS\" for File"));
     printf("Result: %d.\n", ms.eval("var file = File.open(\"../LICENSE\", \"r\")"));
     printf("Result: %d.\n", ms.eval("System.print(file.read(11))"));
     printf("Result: %d.\n", ms.eval("file.close()"));
+    printf("Result: %d.\n", ms.eval("import \"Test\" for Greeter"));
+    printf("Result: %d.\n", ms.eval("Greeter.greet(\"Anonim\")"));
 }
