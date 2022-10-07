@@ -24,14 +24,14 @@ public:
     }
 };
 
-class LinuxFileIf : public FileIf
+class LinuxFile : public FileIf
 {
 private:
     FILE *file;
 
 public:
-    LinuxFileIf(){};
-    ~LinuxFileIf(){};
+    LinuxFile(){};
+    ~LinuxFile(){};
 
     void open(std::string path, std::string accessType)
     {
@@ -83,25 +83,65 @@ class LinuxFS : public FSIf
 public:
     FileIf *open(std::string path, std::string options)
     {
-        LinuxFileIf *file = new LinuxFileIf;
+        LinuxFile *file = new LinuxFile;
         file->open(path, options);
 
         return (FileIf *)file;
     }
 };
 
+class Greeter : public ModuleIf
+{
+public:
+    Greeter(){};
+    ~Greeter(){};
+
+    bool bindClass(WrenForeignClassMethods *methods, std::string module, std::string name)
+    {
+        methods->allocate = nullptr;
+        methods->finalize = nullptr;
+
+        if (name == "Greeter")
+            return true;
+        else
+            return false;
+    }
+    WrenForeignMethodFn bindMethods(std::string name, bool isStatic, std::string sig)
+    {
+        if (name == "Greeter" && isStatic && sig == "greet(_)")
+        {
+            return Greeter::greet;
+        }
+
+        return nullptr;
+    }
+    WrenLoadModuleResult loadModule(WrenVM *vm)
+    {
+        WrenLoadModuleResult result;
+
+        result.source = "foreign class Greeter {\n"
+                        "   foreign static greet(who)\n"
+                        "}";
+
+        return result;
+    }
+
+    static void greet(WrenVM *vm)
+    {
+        printf("Hello %s\n", wrenGetSlotString(vm, 1));
+    }
+};
+
 int main()
 {
-    auto fileDef = "foreign class File {\nconstruct open(path, options) {}\nforeign close()\nforeign read(count)\n}";
+    ModuleManager *mman = new ModuleManager;
 
-    IO *io = new IO;
+    mman->registerIf(new LinuxConsole);
+    mman->registerIf(new LinuxFS);
 
-    io->registerIf(new LinuxConsole);
-    io->registerIf(new LinuxFS);
+    MiniSystem ms(mman);
 
-    MiniSystem ms(io);
-
-    printf("Result: %d.\n", ms.eval(fileDef));
+    printf("Result: %d.\n", ms.eval("import \"FS\""));
     printf("Result: %d.\n", ms.eval("var file = File.open(\"../LICENSE\", \"r\")"));
     printf("Result: %d.\n", ms.eval("System.print(file.read(11))"));
     printf("Result: %d.\n", ms.eval("file.close()"));
